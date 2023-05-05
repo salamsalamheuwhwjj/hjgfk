@@ -7,18 +7,18 @@
 #
 # All rights reserved.
 
-from YukkiMusic.plugins.play.filters import command
 from pyrogram import filters
 from pyrogram.types import InlineKeyboardMarkup, Message
 
 import config
 from config import BANNED_USERS
 from strings import get_command
+from strings.filters import command
 from YukkiMusic import YouTube, app
 from YukkiMusic.core.call import Yukki
 from YukkiMusic.misc import db
 from YukkiMusic.utils.database import get_loop
-from YukkiMusic.utils.decorators import AdminRightsCheckCB
+from YukkiMusic.utils.decorators import AdminRightsCheck
 from YukkiMusic.utils.inline.play import (stream_markup,
                                           telegram_markup)
 from YukkiMusic.utils.stream.autoclear import auto_clean
@@ -28,17 +28,14 @@ from YukkiMusic.utils.thumbnails import gen_thumb
 SKIP_COMMAND = get_command("SKIP_COMMAND")
 
 
-@app.on_message(
-    command(SKIP_COMMAND)
-    & ~filters.edited
-    & ~BANNED_USERS
+@app.on_message(command(SKIP_COMMAND) & filters.group & ~BANNED_USERS
 )
-@AdminRightsCheckCB
-async def skip(cli, message: Message, _, chat_id):
+@AdminRightsCheck
+async def skip(cli, message: Message, _, mystic, chat_id):
     if not len(message.command) < 2:
         loop = await get_loop(chat_id)
         if loop != 0:
-            return await message.reply_text(_["admin_12"])
+            return await mystic.edit_text(_["admin_12"])
         state = message.text.split(None, 1)[1].strip()
         if state.isnumeric():
             state = int(state)
@@ -53,18 +50,15 @@ async def skip(cli, message: Message, _, chat_id):
                             try:
                                 popped = check.pop(0)
                             except:
-                                return await message.reply_text(
+                                return await mystic.edit_text(
                                     _["admin_16"]
                                 )
                             if popped:
-                                if (
-                                    config.AUTO_DOWNLOADS_CLEAR
-                                    == str(True)
-                                ):
+                                if config.AUTO_DOWNLOADS_CLEAR:
                                     await auto_clean(popped)
                             if not check:
                                 try:
-                                    await message.reply_text(
+                                    await mystic.edit_text(
                                         _["admin_10"].format(
                                             message.from_user.first_name
                                         )
@@ -74,25 +68,25 @@ async def skip(cli, message: Message, _, chat_id):
                                     return
                                 break
                     else:
-                        return await message.reply_text(
+                        return await mystic.edit_text(
                             _["admin_15"].format(count)
                         )
                 else:
-                    return await message.reply_text(_["admin_14"])
+                    return await mystic.edit_text(_["admin_14"])
             else:
-                return await message.reply_text(_["queue_2"])
+                return await mystic.edit_text(_["queue_2"])
         else:
-            return await message.reply_text(_["admin_13"])
+            return await mystic.edit_text(_["admin_13"])
     else:
         check = db.get(chat_id)
         popped = None
         try:
             popped = check.pop(0)
             if popped:
-                if config.AUTO_DOWNLOADS_CLEAR == str(True):
+                if config.AUTO_DOWNLOADS_CLEAR:
                     await auto_clean(popped)
             if not check:
-                await message.reply_text(
+                await mystic.edit_text(
                     _["admin_10"].format(message.from_user.first_name)
                 )
                 try:
@@ -101,7 +95,7 @@ async def skip(cli, message: Message, _, chat_id):
                     return
         except:
             try:
-                await message.reply_text(
+                await mystic.edit_text(
                     _["admin_10"].format(message.from_user.first_name)
                 )
                 return await Yukki.stop_stream(chat_id)
@@ -116,16 +110,14 @@ async def skip(cli, message: Message, _, chat_id):
     if "live_" in queued:
         n, link = await YouTube.video(videoid, True)
         if n == 0:
-            return await message.reply_text(
-                _["admin_11"].format(title)
-            )
+            return await mystic.edit_text(_["admin_11"].format(title))
         try:
             await Yukki.skip_stream(chat_id, link, video=status)
         except Exception:
-            return await message.reply_text(_["call_9"])
-        button = telegram_markup(_, chat_id)
+            return await mystic.edit_text(_["call_9"])
+        button = telegram_markup(_)
         img = await gen_thumb(videoid)
-        run = await message.reply_photo(
+        await message.reply_photo(
             photo=img,
             caption=_["stream_1"].format(
                 user,
@@ -133,10 +125,9 @@ async def skip(cli, message: Message, _, chat_id):
             ),
             reply_markup=InlineKeyboardMarkup(button),
         )
-        db[chat_id][0]["mystic"] = run
-        db[chat_id][0]["markup"] = "tg"
+        await mystic.delete()
     elif "vid_" in queued:
-        mystic = await message.reply_text(
+        await mystic.edit_text(
             _["call_10"], disable_web_page_preview=True
         )
         try:
@@ -152,9 +143,9 @@ async def skip(cli, message: Message, _, chat_id):
             await Yukki.skip_stream(chat_id, file_path, video=status)
         except Exception:
             return await mystic.edit_text(_["call_9"])
-        button = stream_markup(_, videoid, chat_id)
+        button = stream_markup(_, videoid)
         img = await gen_thumb(videoid)
-        run = await message.reply_photo(
+        await message.reply_photo(
             photo=img,
             caption=_["stream_1"].format(
                 user,
@@ -162,30 +153,27 @@ async def skip(cli, message: Message, _, chat_id):
             ),
             reply_markup=InlineKeyboardMarkup(button),
         )
-        db[chat_id][0]["mystic"] = run
-        db[chat_id][0]["markup"] = "stream"
         await mystic.delete()
     elif "index_" in queued:
         try:
-            await Yukki.skip_stream(chat_id, videoid, video=status)
+            await Yukki.skip_stream(chat_id, videoid, video=True)
         except Exception:
-            return await message.reply_text(_["call_9"])
-        button = telegram_markup(_, chat_id)
-        run = await message.reply_photo(
+            return await mystic.edit_text(_["call_9"])
+        button = telegram_markup(_)
+        await message.reply_photo(
             photo=config.STREAM_IMG_URL,
             caption=_["stream_2"].format(user),
             reply_markup=InlineKeyboardMarkup(button),
         )
-        db[chat_id][0]["mystic"] = run
-        db[chat_id][0]["markup"] = "tg"
+        await mystic.delete()
     else:
         try:
             await Yukki.skip_stream(chat_id, queued, video=status)
         except Exception:
-            return await message.reply_text(_["call_9"])
+            return await mystic.edit_text(_["call_9"])
         if videoid == "telegram":
-            button = telegram_markup(_, chat_id)
-            run = await message.reply_photo(
+            button = telegram_markup(_)
+            await message.reply_photo(
                 photo=config.TELEGRAM_AUDIO_URL
                 if str(streamtype) == "audio"
                 else config.TELEGRAM_VIDEO_URL,
@@ -194,11 +182,10 @@ async def skip(cli, message: Message, _, chat_id):
                 ),
                 reply_markup=InlineKeyboardMarkup(button),
             )
-            db[chat_id][0]["mystic"] = run
-            db[chat_id][0]["markup"] = "tg"
+            await mystic.delete()
         elif videoid == "soundcloud":
-            button = telegram_markup(_, chat_id)
-            run = await message.reply_photo(
+            button = telegram_markup(_)
+            await message.reply_photo(
                 photo=config.SOUNCLOUD_IMG_URL
                 if str(streamtype) == "audio"
                 else config.TELEGRAM_VIDEO_URL,
@@ -207,12 +194,11 @@ async def skip(cli, message: Message, _, chat_id):
                 ),
                 reply_markup=InlineKeyboardMarkup(button),
             )
-            db[chat_id][0]["mystic"] = run
-            db[chat_id][0]["markup"] = "tg"
+            await mystic.delete()
         else:
-            button = stream_markup(_, videoid, chat_id)
+            button = stream_markup(_, videoid)
             img = await gen_thumb(videoid)
-            run = await message.reply_photo(
+            await message.reply_photo(
                 photo=img,
                 caption=_["stream_1"].format(
                     user,
@@ -220,5 +206,4 @@ async def skip(cli, message: Message, _, chat_id):
                 ),
                 reply_markup=InlineKeyboardMarkup(button),
             )
-            db[chat_id][0]["mystic"] = run
-            db[chat_id][0]["markup"] = "stream"
+            await mystic.delete()

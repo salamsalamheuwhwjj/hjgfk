@@ -12,7 +12,7 @@ from typing import Union
 
 import aiohttp
 from bs4 import BeautifulSoup
-from youtubesearchpython.__future__ import VideosSearch
+from youtubesearchpython import VideosSearch
 
 
 class RessoAPI:
@@ -35,11 +35,14 @@ class RessoAPI:
                     return False
                 html = await response.text()
         soup = BeautifulSoup(html, "html.parser")
+        print("ye")
         for tag in soup.find_all("meta"):
             if tag.get("property", None) == "og:title":
                 title = tag.get("content", None)
+                print(title)
             if tag.get("property", None) == "og:description":
                 des = tag.get("content", None)
+                print("des" + des)
                 try:
                     des = des.split("·")[0]
                 except:
@@ -47,7 +50,7 @@ class RessoAPI:
         if des == "":
             return
         results = VideosSearch(title, limit=1)
-        for result in (await results.next())["result"]:
+        for result in results.result()["result"]:
             title = result["title"]
             ytlink = result["link"]
             vidid = result["id"]

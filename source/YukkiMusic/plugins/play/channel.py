@@ -7,7 +7,6 @@
 #
 # All rights reserved.
 
-from YukkiMusic.plugins.play.filters import command
 from pyrogram import filters
 from pyrogram.types import Message
 
@@ -22,9 +21,8 @@ CHANNELPLAY_COMMAND = get_command("CHANNELPLAY_COMMAND")
 
 
 @app.on_message(
-    command(CHANNELPLAY_COMMAND)
+    filters.command(CHANNELPLAY_COMMAND)
     & filters.group
-    & ~filters.edited
     & ~BANNED_USERS
 )
 @AdminActual
@@ -36,10 +34,7 @@ async def playmode_(client, message: Message, _):
             )
         )
     query = message.text.split(None, 2)[1].lower().strip()
-    if (str(query)).lower() == "disable":
-        await set_cmode(message.chat.id, None)
-        return await message.reply_text("Channel Play Disabled")
-    elif str(query) == "linked":
+    if str(query) == "linked":
         chat = await app.get_chat(message.chat.id)
         if chat.linked_chat:
             chat_id = chat.linked_chat.id

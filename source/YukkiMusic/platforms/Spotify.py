@@ -11,7 +11,7 @@ import re
 
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
-from youtubesearchpython.__future__ import VideosSearch
+from youtubesearchpython import VideosSearch
 
 import config
 
@@ -40,14 +40,12 @@ class SpotifyAPI:
             return False
 
     async def track(self, link: str):
-        track = self.spotify.track(link)
-        info = track["name"]
-        for artist in track["artists"]:
-            fetched = f' {artist["name"]}'
-            if "Various Artists" not in fetched:
-                info += fetched
-        results = VideosSearch(info, limit=1)
-        for result in (await results.next())["result"]:
+        meta = self.spotify.track(link)
+        results = VideosSearch(
+            f"{meta['name']} {meta['album']['artists'][0]['name']}",
+            limit=1,
+        )
+        for result in results.result()["result"]:
             ytlink = result["link"]
             title = result["title"]
             vidid = result["id"]
@@ -65,45 +63,17 @@ class SpotifyAPI:
     async def playlist(self, url):
         playlist = self.spotify.playlist(url)
         playlist_id = playlist["id"]
+        thumb = playlist["images"][0]["url"]
         results = []
         for item in playlist["tracks"]["items"]:
             music_track = item["track"]
-            info = music_track["name"]
-            for artist in music_track["artists"]:
-                fetched = f' {artist["name"]}'
-                if "Various Artists" not in fetched:
-                    info += fetched
-            results.append(info)
-        return results, playlist_id
+            shikhar = music_track["id"]
+            results.append(shikhar)
+        return results, playlist_id, thumb
 
-    async def album(self, url):
-        album = self.spotify.album(url)
-        album_id = album["id"]
-        results = []
-        for item in album["tracks"]["items"]:
-            info = item["name"]
-            for artist in item["artists"]:
-                fetched = f' {artist["name"]}'
-                if "Various Artists" not in fetched:
-                    info += fetched
-            results.append(info)
-
-        return (
-            results,
-            album_id,
+    async def trackplaylist(self, trackid):
+        meta = self.spotify.track(trackid)
+        to_search = (
+            f"{meta['name']} {meta['album']['artists'][0]['name']}"
         )
-
-    async def artist(self, url):
-        artistinfo = self.spotify.artist(url)
-        artist_id = artistinfo["id"]
-        results = []
-        artisttoptracks = self.spotify.artist_top_tracks(url)
-        for item in artisttoptracks["tracks"]:
-            info = item["name"]
-            for artist in item["artists"]:
-                fetched = f' {artist["name"]}'
-                if "Various Artists" not in fetched:
-                    info += fetched
-            results.append(info)
-
-        return results, artist_id
+        return to_search

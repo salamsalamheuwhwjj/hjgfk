@@ -11,7 +11,6 @@ import os
 from random import randint
 
 from pykeyboard import InlineKeyboard
-from YukkiMusic.plugins.play.filters import command
 from pyrogram import filters
 from pyrogram.types import (InlineKeyboardButton,
                             InlineKeyboardMarkup, Message)
@@ -19,7 +18,8 @@ from pyrogram.types import (InlineKeyboardButton,
 from config import BANNED_USERS, SERVER_PLAYLIST_LIMIT
 from strings import get_command
 from YukkiMusic import Carbon, YouTube, app
-from YukkiMusic.utils.database import (delete_playlist, get_playlist,
+from YukkiMusic.utils.database import (delete_playlist, get_chatmode,
+                                       get_cmode, get_playlist,
                                        get_playlist_names,
                                        save_playlist)
 from YukkiMusic.utils.decorators.language import language, languageCB
@@ -34,11 +34,7 @@ PLAYLIST_COMMAND = get_command("PLAYLIST_COMMAND")
 DELETEPLAYLIST_COMMAND = get_command("DELETEPLAYLIST_COMMAND")
 
 
-@app.on_message(
-    command(PLAYLIST_COMMAND)
-    & ~filters.edited
-    & ~BANNED_USERS
-)
+@app.on_message(filters.command(PLAYLIST_COMMAND) & ~BANNED_USERS)
 @language
 async def check_playlist(client, message: Message, _):
     _playlist = await get_playlist_names(message.from_user.id)
@@ -70,9 +66,8 @@ async def check_playlist(client, message: Message, _):
 
 
 @app.on_message(
-    command(DELETEPLAYLIST_COMMAND)
+    filters.command(DELETEPLAYLIST_COMMAND)
     & filters.group
-    & ~filters.edited
     & ~BANNED_USERS
 )
 @language
@@ -117,9 +112,8 @@ async def get_keyboard(_, user_id):
 
 
 @app.on_message(
-    command(DELETEPLAYLIST_COMMAND)
+    filters.command(DELETEPLAYLIST_COMMAND)
     & filters.private
-    & ~filters.edited
     & ~BANNED_USERS
 )
 @language
@@ -150,7 +144,22 @@ async def play_playlist(client, CallbackQuery, _):
             )
         except:
             return
-    chat_id = CallbackQuery.message.chat.id
+    chatmode = await get_chatmode(CallbackQuery.message.chat.id)
+    if chatmode == "Group":
+        chat_id = CallbackQuery.message.chat.id
+        channel = None
+    else:
+        chat_id = await get_cmode(CallbackQuery.message.chat.id)
+        try:
+            chat = await app.get_chat(chat_id)
+            channel = chat.title
+        except:
+            try:
+                return await CallbackQuery.answer(
+                    _["cplay_4"], show_alert=True
+                )
+            except:
+                return
     user_name = CallbackQuery.from_user.first_name
     await CallbackQuery.message.delete()
     result = []
@@ -159,7 +168,9 @@ async def play_playlist(client, CallbackQuery, _):
     except:
         pass
     video = True if mode == "v" else None
-    mystic = await CallbackQuery.message.reply_text(_["play_1"])
+    mystic = await CallbackQuery.message.reply_text(
+        _["play_2"].format(channel) if channel else _["play_1"]
+    )
     for vidids in _playlist:
         result.append(vidids)
     try:

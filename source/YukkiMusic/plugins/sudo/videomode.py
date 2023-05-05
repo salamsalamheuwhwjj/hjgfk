@@ -7,14 +7,13 @@
 #
 # All rights reserved.
 
-from strings.filters import command
 from pyrogram import filters
 from pyrogram.types import Message
 
 import config
 from strings import get_command
 from YukkiMusic import app
-from config.config import OWNER_ID
+from YukkiMusic.misc import SUDOERS
 from YukkiMusic.utils.database import add_off, add_on
 from YukkiMusic.utils.decorators.language import language
 
@@ -22,7 +21,7 @@ from YukkiMusic.utils.decorators.language import language
 VIDEOMODE_COMMAND = get_command("VIDEOMODE_COMMAND")
 
 
-@app.on_message(command(VIDEOMODE_COMMAND) & filters.user(OWNER_ID))
+@app.on_message(filters.command(VIDEOMODE_COMMAND) & SUDOERS)
 @language
 async def videoloaymode(client, message: Message, _):
     usage = _["vidmode_1"]

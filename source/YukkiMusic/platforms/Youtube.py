@@ -15,7 +15,7 @@ from typing import Union
 import aiohttp
 import yt_dlp
 from pyrogram.types import Message
-from youtubesearchpython.__future__ import VideosSearch
+from youtubesearchpython import VideosSearch
 
 import config
 from YukkiMusic.utils.database import is_on_off
@@ -30,13 +30,7 @@ async def shell_cmd(cmd):
     )
     out, errorz = await proc.communicate()
     if errorz:
-        if (
-            "unavailable videos are hidden"
-            in (errorz.decode("utf-8")).lower()
-        ):
-            return out.decode("utf-8")
-        else:
-            return errorz.decode("utf-8")
+        return errorz.decode("utf-8")
     return out.decode("utf-8")
 
 
@@ -51,6 +45,20 @@ class YouTubeAPI:
         )
 
     async def exists(
+        self, link: str, videoid: Union[bool, str] = None
+    ):
+        if videoid:
+            link = self.status + self.base + link
+        else:
+            link = self.status + link
+        async with aiohttp.ClientSession() as session:
+            async with session.get(link) as response:
+                if response.status != 200:
+                    return False
+                else:
+                    return True
+
+    async def valid(
         self, link: str, videoid: Union[bool, str] = None
     ):
         if videoid:
@@ -89,10 +97,8 @@ class YouTubeAPI:
     ):
         if videoid:
             link = self.base + link
-        if "&" in link:
-            link = link.split("&")[0]
         results = VideosSearch(link, limit=1)
-        for result in (await results.next())["result"]:
+        for result in results.result()["result"]:
             title = result["title"]
             duration_min = result["duration"]
             thumbnail = result["thumbnails"][0]["url"].split("?")[0]
@@ -108,10 +114,8 @@ class YouTubeAPI:
     ):
         if videoid:
             link = self.base + link
-        if "&" in link:
-            link = link.split("&")[0]
         results = VideosSearch(link, limit=1)
-        for result in (await results.next())["result"]:
+        for result in results.result()["result"]:
             title = result["title"]
         return title
 
@@ -120,10 +124,8 @@ class YouTubeAPI:
     ):
         if videoid:
             link = self.base + link
-        if "&" in link:
-            link = link.split("&")[0]
         results = VideosSearch(link, limit=1)
-        for result in (await results.next())["result"]:
+        for result in results.result()["result"]:
             duration = result["duration"]
         return duration
 
@@ -132,10 +134,8 @@ class YouTubeAPI:
     ):
         if videoid:
             link = self.base + link
-        if "&" in link:
-            link = link.split("&")[0]
         results = VideosSearch(link, limit=1)
-        for result in (await results.next())["result"]:
+        for result in results.result()["result"]:
             thumbnail = result["thumbnails"][0]["url"].split("?")[0]
         return thumbnail
 
@@ -144,8 +144,6 @@ class YouTubeAPI:
     ):
         if videoid:
             link = self.base + link
-        if "&" in link:
-            link = link.split("&")[0]
         proc = await asyncio.create_subprocess_exec(
             "yt-dlp",
             "-g",
@@ -166,18 +164,19 @@ class YouTubeAPI:
     ):
         if videoid:
             link = self.listbase + link
-        if "&" in link:
-            link = link.split("&")[0]
-        playlist = await shell_cmd(
-            f"yt-dlp -i --get-id --flat-playlist --playlist-end {limit} --skip-download {link}"
+        await shell_cmd(
+            f"yt-dlp -i --get-id --flat-playlist --playlist-end {limit} --skip-download {link} | tee file{user_id}.txt"
         )
-        try:
-            result = playlist.split("\n")
-            for key in result:
-                if key == "":
-                    result.remove(key)
-        except:
-            result = []
+        file = open(f"file{user_id}.txt", "r")
+        got = file.readlines()
+        os.remove(f"file{user_id}.txt")
+        result = []
+        for x in got:
+            if "\n" in x:
+                y = x.strip("\n")
+                result.append(y)
+            else:
+                result.append(x)
         return result
 
     async def track(
@@ -185,10 +184,8 @@ class YouTubeAPI:
     ):
         if videoid:
             link = self.base + link
-        if "&" in link:
-            link = link.split("&")[0]
         results = VideosSearch(link, limit=1)
-        for result in (await results.next())["result"]:
+        for result in results.result()["result"]:
             title = result["title"]
             duration_min = result["duration"]
             vidid = result["id"]
@@ -208,8 +205,6 @@ class YouTubeAPI:
     ):
         if videoid:
             link = self.base + link
-        if "&" in link:
-            link = link.split("&")[0]
         ytdl_opts = {"quiet": True}
         ydl = yt_dlp.YoutubeDL(ytdl_opts)
         with ydl:
@@ -249,10 +244,8 @@ class YouTubeAPI:
     ):
         if videoid:
             link = self.base + link
-        if "&" in link:
-            link = link.split("&")[0]
         a = VideosSearch(link, limit=10)
-        result = (await a.next()).get("result")
+        result = (a.result()).get("result")
         title = result[query_type]["title"]
         duration_min = result[query_type]["duration"]
         vidid = result[query_type]["id"]

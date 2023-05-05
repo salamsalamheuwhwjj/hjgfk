@@ -8,7 +8,6 @@
 # All rights reserved.
 
 from pykeyboard import InlineKeyboard
-from strings.filters import command
 from pyrogram import filters
 from pyrogram.types import InlineKeyboardButton, Message
 
@@ -26,7 +25,7 @@ def lanuages_keyboard(_):
     keyboard = InlineKeyboard(row_width=2)
     keyboard.row(
         InlineKeyboardButton(
-            text="󠁧󠁢󠁥🇪🇬 عربي",
+            text="🏴󠁧󠁢󠁥󠁮󠁧󠁿 English",
             callback_data=f"languages:en",
         ),
         InlineKeyboardButton(
@@ -36,29 +35,9 @@ def lanuages_keyboard(_):
     )
     keyboard.row(
         InlineKeyboardButton(
-            text="English 🇬🇬",
+            text="🇱🇰 සිංහල",
             callback_data=f"languages:si",
-        ),
-        InlineKeyboardButton(
-            text="🇦🇿 Azərbaycan",
-            callback_data=f"languages:az",
-        ),
-    )
-    keyboard.row(
-        InlineKeyboardButton(
-            text="🇮🇳 ગુજરાતી",
-            callback_data=f"languages:gu",
-        ),
-        InlineKeyboardButton(
-            text="🇹🇷 Türkiye Türkçesi",
-            callback_data=f"languages:tr",
-        ),
-    )
-    keyboard.row(
-        InlineKeyboardButton(
-            text="🐶 Cheems",
-            callback_data=f"languages:cheems",
-        ),
+        )
     )
     keyboard.row(
         InlineKeyboardButton(
@@ -76,9 +55,7 @@ LANGUAGE_COMMAND = get_command("LANGUAGE_COMMAND")
 
 
 @app.on_message(
-    command(LANGUAGE_COMMAND)
-    & ~filters.edited
-    & ~BANNED_USERS
+    filters.command(LANGUAGE_COMMAND) & filters.group & ~BANNED_USERS
 )
 @language
 async def langs_command(client, message: Message, _):
@@ -113,6 +90,7 @@ async def language_markup(client, CallbackQuery, _):
         return await CallbackQuery.answer(
             "You're already on same language", show_alert=True
         )
+    await set_lang(CallbackQuery.message.chat.id, langauge)
     try:
         _ = get_string(langauge)
         await CallbackQuery.answer(

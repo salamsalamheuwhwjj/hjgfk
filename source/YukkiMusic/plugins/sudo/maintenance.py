@@ -7,29 +7,22 @@
 #
 # All rights reserved.
 
-from strings.filters import command
 from pyrogram import filters
 from pyrogram.types import Message
 
-from strings import get_command, get_string
+from strings import get_command
 from YukkiMusic import app
-from config.config import OWNER_ID
-from YukkiMusic.utils.database import (get_lang, is_maintenance,
-                                       maintenance_off,
-                                       maintenance_on)
+from YukkiMusic.misc import SUDOERS
+from YukkiMusic.utils.database import add_off, add_on
 from YukkiMusic.utils.decorators.language import language
 
 # Commands
 MAINTENANCE_COMMAND = get_command("MAINTENANCE_COMMAND")
 
 
-@app.on_message(command(MAINTENANCE_COMMAND) & filters.user(OWNER_ID))
-async def maintenance(client, message: Message):
-    try:
-        language = await get_lang(message.chat.id)
-        _ = get_string(language)
-    except:
-        _ = get_string("en")
+@app.on_message(filters.command(MAINTENANCE_COMMAND) & SUDOERS)
+@language
+async def maintenance(client, message: Message, _):
     usage = _["maint_1"]
     if len(message.command) != 2:
         return await message.reply_text(usage)
@@ -37,20 +30,12 @@ async def maintenance(client, message: Message):
     state = message.text.split(None, 1)[1].strip()
     state = state.lower()
     if state == "enable":
-        if await is_maintenance() is False:
-            await message.reply_text(
-                "Maintenance mode is already enabled"
-            )
-        else:
-            await maintenance_on()
-            await message.reply_text(_["maint_2"])
+        user_id = 1
+        await add_on(user_id)
+        await message.reply_text(_["maint_2"])
     elif state == "disable":
-        if await is_maintenance() is False:
-            await maintenance_off()
-            await message.reply_text(_["maint_3"])
-        else:
-            await message.reply_text(
-                "Maintenance mode is already disabled"
-            )
+        user_id = 1
+        await add_off(user_id)
+        await message.reply_text(_["maint_3"])
     else:
         await message.reply_text(usage)

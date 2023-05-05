@@ -15,19 +15,16 @@ import socket
 from datetime import datetime
 
 import dotenv
-import heroku3
 import requests
 import urllib3
 from git import Repo
 from git.exc import GitCommandError, InvalidGitRepositoryError
-from strings.filters import command
 from pyrogram import filters
 
 import config
 from strings import get_command
 from YukkiMusic import app
-from config.config import OWNER_ID
-from YukkiMusic.misc import HAPP, XCB
+from YukkiMusic.misc import HAPP, SUDOERS, XCB
 from YukkiMusic.utils.database import (get_active_chats,
                                        remove_active_chat,
                                        remove_active_video_chat)
@@ -41,7 +38,7 @@ DELVAR_COMMAND = get_command("DELVAR_COMMAND")
 SETVAR_COMMAND = get_command("SETVAR_COMMAND")
 USAGE_COMMAND = get_command("USAGE_COMMAND")
 UPDATE_COMMAND = get_command("UPDATE_COMMAND")
-REBOOT_COMMAND = get_command("REBOOT_COMMAND")
+RESTART_COMMAND = get_command("RESTART_COMMAND")
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -50,7 +47,7 @@ async def is_heroku():
     return "heroku" in socket.getfqdn()
 
 
-@app.on_message(command(GETLOG_COMMAND) & filters.user(OWNER_ID))
+@app.on_message(filters.command(GETLOG_COMMAND) & SUDOERS)
 @language
 async def log_(client, message, _):
     try:
@@ -80,7 +77,7 @@ async def log_(client, message, _):
         await message.reply_text(_["heroku_2"])
 
 
-@app.on_message(command(GETVAR_COMMAND) & filters.user(OWNER_ID))
+@app.on_message(filters.command(GETVAR_COMMAND) & SUDOERS)
 @language
 async def varget_(client, message, _):
     usage = _["heroku_3"]
@@ -110,7 +107,7 @@ async def varget_(client, message, _):
             )
 
 
-@app.on_message(command(DELVAR_COMMAND) & filters.user(OWNER_ID))
+@app.on_message(filters.command(DELVAR_COMMAND) & SUDOERS)
 @language
 async def vardel_(client, message, _):
     usage = _["heroku_6"]
@@ -138,7 +135,7 @@ async def vardel_(client, message, _):
             os.system(f"kill -9 {os.getpid()} && bash start")
 
 
-@app.on_message(command(SETVAR_COMMAND) & filters.user(OWNER_ID))
+@app.on_message(filters.command(SETVAR_COMMAND) & SUDOERS)
 @language
 async def set_var(client, message, _):
     usage = _["heroku_8"]
@@ -167,7 +164,7 @@ async def set_var(client, message, _):
         os.system(f"kill -9 {os.getpid()} && bash start")
 
 
-@app.on_message(command(USAGE_COMMAND) & filters.user(OWNER_ID))
+@app.on_message(filters.command(USAGE_COMMAND) & SUDOERS)
 @language
 async def usage_dynos(client, message, _):
     ### Credits CatUserbot
@@ -177,8 +174,7 @@ async def usage_dynos(client, message, _):
     else:
         return await message.reply_text(_["heroku_11"])
     dyno = await message.reply_text(_["heroku_12"])
-    Heroku = heroku3.from_key(config.HEROKU_API_KEY)
-    account_id = Heroku.account().id
+    account_id = HAPP.account().id
     useragent = (
         "Mozilla/5.0 (Linux; Android 10; SM-G975F) "
         "AppleWebKit/537.36 (KHTML, like Gecko) "
@@ -224,7 +220,7 @@ Total Left: `{hours}`**h**  `{minutes}`**m**  [`{percentage}`**%**]"""
     return await dyno.edit(text)
 
 
-@app.on_message(command(UPDATE_COMMAND) & filters.user(OWNER_ID))
+@app.on_message(filters.command(UPDATE_COMMAND) & SUDOERS)
 @language
 async def update_(client, message, _):
     if await is_heroku():
@@ -324,7 +320,7 @@ async def update_(client, message, _):
         exit()
 
 
-@app.on_message(command(REBOOT_COMMAND) & filters.user(OWNER_ID))
+@app.on_message(filters.command(RESTART_COMMAND) & SUDOERS)
 async def restart_(_, message):
     response = await message.reply_text("Restarting....")
     served_chats = await get_active_chats()

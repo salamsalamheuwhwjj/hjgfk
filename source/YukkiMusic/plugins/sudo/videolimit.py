@@ -7,20 +7,19 @@
 #
 # All rights reserved.
 
-from strings.filters import command
 from pyrogram import filters
 from pyrogram.types import Message
 
 from strings import get_command
 from YukkiMusic import app
-from config.config import OWNER_ID
+from YukkiMusic.misc import SUDOERS
 from YukkiMusic.utils.database import set_video_limit
 from YukkiMusic.utils.decorators.language import language
 
 VIDEOLIMIT_COMMAND = get_command("VIDEOLIMIT_COMMAND")
 
 
-@app.on_message(command(VIDEOLIMIT_COMMAND) & filters.user(OWNER_ID))
+@app.on_message(filters.command(VIDEOLIMIT_COMMAND) & SUDOERS)
 @language
 async def set_video_limit_kid(client, message: Message, _):
     if len(message.command) != 2:

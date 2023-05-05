@@ -7,7 +7,6 @@
 #
 # All rights reserved.
 
-from YukkiMusic.plugins.play.filters import command
 from pyrogram import filters
 from pyrogram.types import Message
 
@@ -23,16 +22,13 @@ LOOP_COMMAND = get_command("LOOP_COMMAND")
 
 
 @app.on_message(
-    command(LOOP_COMMAND)
-    & filters.group
-    & ~filters.edited
-    & ~BANNED_USERS
+    filters.command(LOOP_COMMAND) & filters.group & ~BANNED_USERS
 )
 @AdminRightsCheck
-async def admins(cli, message: Message, _, chat_id):
+async def admins(cli, message: Message, _, mystic, chat_id):
     usage = _["admin_24"]
     if len(message.command) != 2:
-        return await message.reply_text(usage)
+        return await mystic.edit_text(usage)
     state = message.text.split(None, 1)[1].strip()
     if state.isnumeric():
         state = int(state)
@@ -43,20 +39,20 @@ async def admins(cli, message: Message, _, chat_id):
             if int(state) > 10:
                 state = 10
             await set_loop(chat_id, state)
-            return await message.reply_text(
+            return await mystic.edit_text(
                 _["admin_25"].format(
                     message.from_user.first_name, state
                 )
             )
         else:
-            return await message.reply_text(_["admin_26"])
+            return await mystic.edit_text(_["admin_26"])
     elif state.lower() == "enable":
         await set_loop(chat_id, 10)
-        return await message.reply_text(
+        return await mystic.edit_text(
             _["admin_25"].format(message.from_user.first_name, state)
         )
     elif state.lower() == "disable":
         await set_loop(chat_id, 0)
-        return await message.reply_text(_["admin_27"])
+        return await mystic.edit_text(_["admin_27"])
     else:
-        return await message.reply_text(usage)
+        return await mystic.edit_text(usage)

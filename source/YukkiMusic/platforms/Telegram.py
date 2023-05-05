@@ -7,17 +7,15 @@
 #
 # All rights reserved.
 
-import asyncio
 import os
 import time
 from datetime import datetime, timedelta
 from typing import Union
 
-from pyrogram.types import (InlineKeyboardButton,
-                            InlineKeyboardMarkup, Voice)
+from pyrogram.types import Voice
 
 import config
-from config import MUSIC_BOT_NAME, lyrical
+from config import MUSIC_BOT_NAME
 from YukkiMusic import app
 
 from ..utils.formatters import (convert_bytes, get_readable_time,
@@ -117,36 +115,25 @@ class TeleAPI:
         if os.path.exists(fname):
             return True
 
-        async def down_load():
-            async def progress(current, total):
-                if current == total:
-                    return
-                current_time = time.time()
-                start_time = speed_counter.get(message.message_id)
-                check_time = current_time - start_time
-                upl = InlineKeyboardMarkup(
-                    [
-                        [
-                            InlineKeyboardButton(
-                                text="🚦 Cancel Downloading",
-                                callback_data="stop_downloading",
-                            ),
-                        ]
-                    ]
-                )
-                if datetime.now() > left_time.get(message.message_id):
-                    percentage = current * 100 / total
-                    percentage = str(round(percentage, 2))
-                    speed = current / check_time
-                    eta = int((total - current) / speed)
-                    downloader[message.message_id] = eta
-                    eta = get_readable_time(eta)
-                    if not eta:
-                        eta = "0 sec"
-                    total_size = convert_bytes(total)
-                    completed_size = convert_bytes(current)
-                    speed = convert_bytes(speed)
-                    text = f"""
+        async def progress(current, total):
+            if current == total:
+                return
+            current_time = time.time()
+            start_time = speed_counter.get(message.message_id)
+            check_time = current_time - start_time
+            if datetime.now() > left_time.get(message.message_id):
+                percentage = current * 100 / total
+                percentage = str(round(percentage, 2))
+                speed = current / check_time
+                eta = int((total - current) / speed)
+                downloader[message.message_id] = eta
+                eta = get_readable_time(eta)
+                if not eta:
+                    eta = "0 sec"
+                total_size = convert_bytes(total)
+                completed_size = convert_bytes(current)
+                speed = convert_bytes(speed)
+                text = f"""
 **{MUSIC_BOT_NAME} Telegram Media Downloader**
 
 **Total FileSize:** {total_size}
@@ -155,51 +142,40 @@ class TeleAPI:
 
 **Speed:** {speed}/s
 **ETA:** {eta}"""
-                    try:
-                        await mystic.edit_text(text, reply_markup=upl)
-                    except:
-                        pass
-                    left_time[
-                        message.message_id
-                    ] = datetime.now() + timedelta(seconds=self.sleep)
+                try:
+                    await mystic.edit(text)
+                except:
+                    pass
+                left_time[
+                    message.message_id
+                ] = datetime.now() + timedelta(seconds=self.sleep)
 
-            speed_counter[message.message_id] = time.time()
-            left_time[message.message_id] = datetime.now()
-
-            try:
-                await app.download_media(
-                    message.reply_to_message,
-                    file_name=fname,
-                    progress=progress,
-                )
-                await mystic.edit_text(
-                    "Successfully Downloaded.. Processing file now"
-                )
-                downloader.pop(message.message_id)
-            except:
-                await mystic.edit_text(_["tg_2"])
-
-        if len(downloader) > 10:
+        if len(downloader) > 3:
             timers = []
             for x in downloader:
                 timers.append(downloader[x])
-            try:
-                low = min(timers)
-                eta = get_readable_time(low)
-            except:
-                eta = "Unknown"
+            low = min(timers)
+            eta = get_readable_time(low)
             await mystic.edit_text(_["tg_1"].format(eta))
             return False
 
-        task = asyncio.create_task(down_load())
-        lyrical[mystic.message_id] = task
-        await task
-        downloaded = downloader.get(message.message_id)
-        if downloaded:
-            downloader.pop(message.message_id)
+        speed_counter[message.message_id] = time.time()
+        left_time[message.message_id] = datetime.now()
+        try:
+            X = await app.download_media(
+                message.reply_to_message,
+                file_name=fname,
+                progress=progress,
+            )
+            try:
+                downloader.pop(message.message_id)
+            except:
+                pass
+            return True
+        except:
+            try:
+                downloader.pop(message.message_id)
+            except:
+                pass
+            await mystic.edit_text(_["tg_2"])
             return False
-        verify = lyrical.get(mystic.message_id)
-        if not verify:
-            return False
-        lyrical.pop(mystic.message_id)
-        return True

@@ -17,6 +17,7 @@ from YukkiMusic.utils.formatters import seconds_to_min
 
 class SoundAPI:
     def __init__(self):
+        self.regex = r"^(https:\/\/soundcloud.com\/)(.*)$"
         self.opts = {
             "outtmpl": "downloads/%(id)s.%(ext)s",
             "format": "best",
@@ -26,7 +27,7 @@ class SoundAPI:
         }
 
     async def valid(self, link: str):
-        if "soundcloud" in link:
+        if re.search(self.regex, link):
             return True
         else:
             return False
